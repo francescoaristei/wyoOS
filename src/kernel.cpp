@@ -1,4 +1,3 @@
-
 #include <common/types.h>
 #include <gdt.h>
 #include <memorymanagement.h>
@@ -94,9 +93,6 @@ void printfHex32(uint32_t key)
 }
 
 
-
-
-
 class PrintfKeyboardEventHandler : public KeyboardEventHandler
 {
 public:
@@ -110,6 +106,7 @@ public:
 
 class MouseToConsole : public MouseEventHandler
 {
+    /* positions on the screen of the mouse */
     int8_t x, y;
 public:
     
@@ -123,6 +120,7 @@ public:
                             | (VideoMemory[80*y+x] & 0x00FF);        
     }
     
+    /* when we move the mouse we have to add the movement to the current position of the mouse */
     virtual void OnMouseMove(int xoffset, int yoffset)
     {
         static uint16_t* VideoMemory = (uint16_t*)0xb8000;
@@ -131,14 +129,21 @@ public:
                             | (VideoMemory[80*y+x] & 0x00FF);
 
         x += xoffset;
+        /* if we move the mouse on the rigth we want it to stay there and not move on the next line */
         if(x >= 80) x = 79;
         if(x < 0) x = 0;
         y += yoffset;
         if(y >= 25) y = 24;
         if(y < 0) y = 0;
 
+        /*
+        we want to display the cursor on the screen, se we take x, y and after having moved the cursor on the next position
+        we want to flip the low four bits of the first byte as high 4 bits and take the high four bits of the first byte then copy as first four bits
+        of the first byte; this allows to change the color in the next position.
+        */
         VideoMemory[80*y+x] = (VideoMemory[80*y+x] & 0x0F00) << 4
                             | (VideoMemory[80*y+x] & 0xF000) >> 4
+                            /* the last 8 bits stay the same */
                             | (VideoMemory[80*y+x] & 0x00FF);
     }
     
@@ -298,6 +303,7 @@ extern "C" void kernelMain(const void* multiboot_structure, uint32_t /*multiboot
         #endif
         
     printf("Initializing Hardware, Stage 2\n");
+        /* this way the driver manager activates all the drivers */
         drvManager.ActivateAll();
         
     printf("Initializing Hardware, Stage 3\n");

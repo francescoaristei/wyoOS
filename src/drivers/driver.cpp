@@ -14,6 +14,11 @@ void Driver::Activate()
 {
 }
 
+/*
+When the OS is started you enumerate the hardware, ut you don't know the state of the hardware, so you reset them and wait
+a bit so that you know the state of the hardware, is a matter of security. What if the booloader didn't clean up perfectly the last run of the OS? 
+To avoid inconsistent state we reset everything. Reset() will tell how long we should wait until we restart the boot sequence. 
+*/
 int Driver::Reset()
 {
     return 0;

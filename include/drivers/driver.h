@@ -2,6 +2,8 @@
 #ifndef __MYOS__DRIVERS__DRIVER_H
 #define __MYOS__DRIVERS__DRIVER_H
 
+/* Class Driver "extended" by all other driver classes */
+
 namespace myos
 {
     namespace drivers
@@ -18,6 +20,7 @@ namespace myos
             virtual void Deactivate();
         };
 
+        /* class driver manager to handle each different driver */
         class DriverManager
         {
         public:

@@ -6,8 +6,6 @@ using namespace myos::drivers;
 using namespace myos::hardwarecommunication;
 
 
-
-
 PeripheralComponentInterconnectDeviceDescriptor::PeripheralComponentInterconnectDeviceDescriptor()
 {
 }
@@ -18,11 +16,8 @@ PeripheralComponentInterconnectDeviceDescriptor::~PeripheralComponentInterconnec
 
 
 
-
-
-
-
 PeripheralComponentInterconnectController::PeripheralComponentInterconnectController()
+/* 0xCFC and 0xCF8 are both standard ports for the PCI */
 : dataPort(0xCFC),
   commandPort(0xCF8)
 {
@@ -34,14 +29,26 @@ PeripheralComponentInterconnectController::~PeripheralComponentInterconnectContr
 
 uint32_t PeripheralComponentInterconnectController::Read(uint16_t bus, uint16_t device, uint16_t function, uint32_t registeroffset)
 {
+    /* ID sent to the PCI controller built from the passed parameters */
     uint32_t id =
+        /* the first bit needs to be set explicitly to 1 */
         0x1 << 31
         | ((bus & 0xFF) << 16)
         | ((device & 0x1F) << 11)
         | ((function & 0x07) << 8)
+        /* 
+        we cut of the last two bits of the registeroffset.
+        */
         | (registeroffset & 0xFC);
+    /* communicate the ID to the PCI controller */
     commandPort.Write(id);
     uint32_t result = dataPort.Read();
+    /*
+    This result number we get when reading is 4 byte aligned, meaning the bytes are grouped as 32 bits integers.
+    We cannot ask to get the location of the third or second bytes of the integer, we can only ask for the full 32 bits integers.
+    If we want a bytes that is in the "middle" of the 32 bits integer we can get, we have to ask for the 32 bits integer and extract from there
+    the byte we are interested in.
+    */
     return result >> (8* (registeroffset % 4));
 }
 
@@ -57,8 +64,10 @@ void PeripheralComponentInterconnectController::Write(uint16_t bus, uint16_t dev
     dataPort.Write(value); 
 }
 
+/* It may be that a device does not have all the 8 possible functions, this is a way to ask a device if it has a certain function */
 bool PeripheralComponentInterconnectController::DeviceHasFunctions(common::uint16_t bus, common::uint16_t device)
 {
+    /* we only need the seventh bit of that (1<<7) because it is the one telling if the device has function or not */
     return Read(bus, device, 0, 0x0E) & (1<<7);
 }
 
@@ -77,19 +86,31 @@ void PeripheralComponentInterconnectController::SelectDrivers(DriverManager* dri
             {
                 PeripheralComponentInterconnectDeviceDescriptor dev = GetDeviceDescriptor(bus, device, function);
                 
+                /* if there is no device on that function than the vendor_id is either all 0s or 1s so we continue */
                 if(dev.vendor_id == 0x0000 || dev.vendor_id == 0xFFFF)
                     continue;
                 
-                
+                /* iterate over the base address registers */
                 for(int barNum = 0; barNum < 6; barNum++)
                 {
+                    /* 
+                    in the GetBaseAddressRegister() the address is set to the higher bits of the BAR, which in case of 
+                    the I/O Bars contain the port number 
+                    */
                     BaseAddressRegister bar = GetBaseAddressRegister(bus, device, function, barNum);
+                    /* only if the address is set and the type is I/O then we procede */
                     if(bar.address && (bar.type == InputOutput))
+                        /* we set the port base value from the device descriptor to the address*/
                         dev.portBase = (uint32_t)bar.address;
                 }
                 
+                /*
+                The get driver method is used for the device we want to have the driver for and the driver is connected with the
+                interrupt manager
+                */
                 Driver* driver = GetDriver(dev, interrupts);
                 if(driver != 0)
+                    /* driver added to the driver manager */
                     driverManager->AddDriver(driver);
 
                 
@@ -120,13 +141,17 @@ BaseAddressRegister PeripheralComponentInterconnectController::GetBaseAddressReg
     BaseAddressRegister result;
     
     
+    /* we are reading the offset 0X0E and we are only interested in the first seven bits of this */
     uint32_t headertype = Read(bus, device, function, 0x0E) & 0x7F;
+    /* in the case of the 64 bits base address register there are only 2 bits of the first seven of interest */
     int maxBARs = 6 - (4*headertype);
+    /* if we have requested a BAR behind this maximum of 64 we simply return the result */
     if(bar >= maxBARs)
         return result;
     
-    
+    /* we read the offset 0x10 plus 4*bar because the BAR has a size of 4 bytes */
     uint32_t bar_value = Read(bus, device, function, 0x10 + 4*bar);
+    /* the last bit is for the type so we want to read it */
     result.type = (bar_value & 0x1) ? InputOutput : MemoryMapping;
     uint32_t temp;
     
@@ -147,6 +172,10 @@ BaseAddressRegister PeripheralComponentInterconnectController::GetBaseAddressReg
     }
     else // InputOutput
     {
+        /* 
+         we set the address to the bar value but we cancel the last 2 bits (the unused bit and the type) so we obtain the port
+        which we will use for communication
+        */
         result.address = (uint8_t*)(bar_value & ~0x3);
         result.prefetchable = false;
     }
@@ -162,6 +191,7 @@ Driver* PeripheralComponentInterconnectController::GetDriver(PeripheralComponent
     Driver* driver = 0;
     switch(dev.vendor_id)
     {
+        /* look for a driver fir for the specific device */
         case 0x1022: // AMD
             switch(dev.device_id)
             {
@@ -181,7 +211,7 @@ Driver* PeripheralComponentInterconnectController::GetDriver(PeripheralComponent
             break;
     }
     
-    
+    /* if we don't find a driver fit for the specific device */
     switch(dev.class_id)
     {
         case 0x03: // graphics
@@ -208,8 +238,8 @@ PeripheralComponentInterconnectDeviceDescriptor PeripheralComponentInterconnectC
     result.device = device;
     result.function = function;
     
-    result.vendor_id = Read(bus, device, function, 0x00);
-    result.device_id = Read(bus, device, function, 0x02);
+    result.vendor_id = Read(bus, device, function, 0x00); // offset 00
+    result.device_id = Read(bus, device, function, 0x02); // offset 02 etc...
 
     result.class_id = Read(bus, device, function, 0x0b);
     result.subclass_id = Read(bus, device, function, 0x0a);

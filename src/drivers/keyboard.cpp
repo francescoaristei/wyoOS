@@ -19,9 +19,6 @@ void KeyboardEventHandler::OnKeyUp(char)
 }
 
 
-
-
-
 KeyboardDriver::KeyboardDriver(InterruptManager* manager, KeyboardEventHandler *handler)
 : InterruptHandler(manager, 0x21),
 dataport(0x60),
@@ -53,6 +50,7 @@ uint32_t KeyboardDriver::HandleInterrupt(uint32_t esp)
 {
     uint8_t key = dataport.Read();
     
+    /* if the handler is not present we return */
     if(handler == 0)
         return esp;
     

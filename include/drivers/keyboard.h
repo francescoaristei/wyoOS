@@ -11,12 +11,13 @@ namespace myos
 {
     namespace drivers
     {
-    
+        /* */
         class KeyboardEventHandler
         {
         public:
             KeyboardEventHandler();
 
+            /* for each key of the keyboard there is an internal enumeration which is passed as parameter (char) to each method */
             virtual void OnKeyDown(char);
             virtual void OnKeyUp(char);
         };

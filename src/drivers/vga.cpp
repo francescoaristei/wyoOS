@@ -24,8 +24,6 @@ VideoGraphicsArray::VideoGraphicsArray() :
 VideoGraphicsArray::~VideoGraphicsArray()
 {
 }
-
-
             
 void VideoGraphicsArray::WriteRegisters(uint8_t* registers)
 {
@@ -40,11 +38,18 @@ void VideoGraphicsArray::WriteRegisters(uint8_t* registers)
     }
     
     // cathode ray tube controller
+    /* cathode ray tube needs to be unlocked, send data, and lock it, it is done for security reasons. Here we unlock it. */
     crtcIndexPort.Write(0x03);
+    /* we get the old value and we set the first bit to 1 writing it back to that index */
     crtcDataPort.Write(crtcDataPort.Read() | 0x80);
     crtcIndexPort.Write(0x11);
+    /* for the seventheenth index we set the first bit to 0 */
     crtcDataPort.Write(crtcDataPort.Read() & ~0x80);
     
+    /* 
+    In the register written in 0x03 we also set the first bit to 1 and the register written in 0x11 we set the first bit to 0
+    just to make sure that we don't overwrite it again
+     */
     registers[0x03] = registers[0x03] | 0x80;
     registers[0x11] = registers[0x11] & ~0x80;
     
@@ -69,6 +74,7 @@ void VideoGraphicsArray::WriteRegisters(uint8_t* registers)
         attributeControllerWritePort.Write(*(registers++));
     }
     
+    /* we reset the attribute controller again and write 0x20 to the attribute controller index port */
     attributeControllerResetPort.Read();
     attributeControllerIndexPort.Write(0x20);
     
@@ -76,6 +82,7 @@ void VideoGraphicsArray::WriteRegisters(uint8_t* registers)
 
 bool VideoGraphicsArray::SupportsMode(uint32_t width, uint32_t height, uint32_t colordepth)
 {
+    /* 8 bits color depth */
     return width == 320 && height == 200 && colordepth == 8;
 }
 
@@ -84,6 +91,7 @@ bool VideoGraphicsArray::SetMode(uint32_t width, uint32_t height, uint32_t color
     if(!SupportsMode(width, height, colordepth))
         return false;
     
+    /* these are the sequence of codes that we have to write in the registers (memory) allocated to the VGA */
     unsigned char g_320x200x256[] =
     {
         /* MISC */
@@ -111,11 +119,17 @@ bool VideoGraphicsArray::SetMode(uint32_t width, uint32_t height, uint32_t color
 
 uint8_t* VideoGraphicsArray::GetFrameBufferSegment()
 {
+    /* we are looking for index number 6 in the graphic controller */
     graphicsControllerIndexPort.Write(0x06);
+    /*
+    We shift by two because we are only interested in bits number 3 and 4 and then we take the bitwise AND with bit
+    number 3 so that all the other bits are killed
+    */
     uint8_t segmentNumber = graphicsControllerDataPort.Read() & (3<<2);
     switch(segmentNumber)
     {
         default:
+        /* if it is 0 then we need to write our data to the memory location 0x00000 */
         case 0<<2: return (uint8_t*)0x00000;
         case 1<<2: return (uint8_t*)0xA0000;
         case 2<<2: return (uint8_t*)0xB0000;
@@ -129,6 +143,7 @@ void VideoGraphicsArray::PutPixel(int32_t x, int32_t y,  uint8_t colorIndex)
     || y < 0 || 200 <= y)
         return;
         
+    /* we get the current buffer segment which is where to put the pixel */
     uint8_t* pixelAddress = GetFrameBufferSegment() + 320*y + x;
     *pixelAddress = colorIndex;
 }
@@ -145,6 +160,7 @@ uint8_t VideoGraphicsArray::GetColorIndex(uint8_t r, uint8_t g, uint8_t b)
            
 void VideoGraphicsArray::PutPixel(int32_t x, int32_t y,  uint8_t r, uint8_t g, uint8_t b)
 {
+    /* we take the color index for a certain rgb color and we use it in the put pixel method */
     PutPixel(x,y, GetColorIndex(r,g,b));
 }
 

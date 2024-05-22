@@ -28,8 +28,11 @@ namespace myos
         {
             myos::hardwarecommunication::Port8Bit dataport;
             myos::hardwarecommunication::Port8Bit commandport;
+            /* 3 bytes buffer */
             myos::common::uint8_t buffer[3];
             myos::common::uint8_t offset;
+            /* the transition from the mouse always give the current state, but to understand if the cursor has move
+            we need to compare the current state with the previous, hence we save here the previous state of the mouse */
             myos::common::uint8_t buttons;
 
             MouseEventHandler* handler;
