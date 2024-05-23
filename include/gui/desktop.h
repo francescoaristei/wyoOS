@@ -9,7 +9,11 @@ namespace myos
 {
     namespace gui
     {
-        
+        /* 
+        The Desktop will work like the composite widget, we will have to overwrite the methods for the mouse event handler
+        to translate the mouse movement. From the mouse we only get relative movements and the desktop will have to translate these
+        relative movements in absolute movements from the mouse.
+        */
         class Desktop : public CompositeWidget, public myos::drivers::MouseEventHandler
         {
         protected:

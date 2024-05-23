@@ -9,7 +9,7 @@ namespace myos
 {
     namespace gui
     {
-        
+        /* we will be able to drag the window around the screen */
         class Window : public CompositeWidget
         { 
         protected:
@@ -21,6 +21,7 @@ namespace myos
                    common::uint8_t r, common::uint8_t g, common::uint8_t b);
             ~Window();
 
+            /* if the window is set on these methods we will change the x and y coordinates of the window to make it move in the screen */
             void OnMouseDown(common::int32_t x, common::int32_t y, common::uint8_t button);
             void OnMouseUp(common::int32_t x, common::int32_t y, common::uint8_t button);
             void OnMouseMove(common::int32_t oldx, common::int32_t oldy, common::int32_t newx, common::int32_t newy);

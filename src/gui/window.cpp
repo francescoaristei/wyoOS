@@ -18,6 +18,7 @@ Window::~Window()
 
 void Window::OnMouseDown(common::int32_t x, common::int32_t y, common::uint8_t button)
 {
+    /* only if we are clicking the mouse we want to drag the window */
     Dragging = button == 1;
     CompositeWidget::OnMouseDown(x,y,button);
 }
@@ -30,11 +31,14 @@ void Window::OnMouseUp(common::int32_t x, common::int32_t y, common::uint8_t but
 
 void Window::OnMouseMove(common::int32_t oldx, common::int32_t oldy, common::int32_t newx, common::int32_t newy)
 {
+    /* if we want to drag the window then we change the x and y coordinates */
     if(Dragging)
     {
         this->x += newx-oldx;
         this->y += newy-oldy;
     }
+
+    /* the widget that the windows contains will never be notified that we want to move the window if we don't call the parent method */
     CompositeWidget::OnMouseMove(oldx,oldy,newx, newy);
 
 }

@@ -139,6 +139,7 @@ uint8_t* VideoGraphicsArray::GetFrameBufferSegment()
             
 void VideoGraphicsArray::PutPixel(int32_t x, int32_t y,  uint8_t colorIndex)
 {
+    /* when we move the mouse, we cannot know if the coordinates where we move the mouse are legal. And here we check the validity */
     if(x < 0 || 320 <= x
     || y < 0 || 200 <= y)
         return;
@@ -157,7 +158,7 @@ uint8_t VideoGraphicsArray::GetColorIndex(uint8_t r, uint8_t g, uint8_t b)
     if(r == 0xFF && g == 0xFF && b == 0xFF) return 0x3F; // white
     return 0x00;
 }
-           
+
 void VideoGraphicsArray::PutPixel(int32_t x, int32_t y,  uint8_t r, uint8_t g, uint8_t b)
 {
     /* we take the color index for a certain rgb color and we use it in the put pixel method */

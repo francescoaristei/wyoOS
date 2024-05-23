@@ -7,6 +7,7 @@ namespace myos
 {
     namespace common
     {
+        /* the GraphicsContext class does not exist actually, is just the VGA class */
         typedef myos::drivers::VideoGraphicsArray GraphicsContext;
     }
 }
