@@ -199,6 +199,7 @@ Driver* PeripheralComponentInterconnectController::GetDriver(PeripheralComponent
                     printf("AMD am79c973 ");
                     driver = (amd_am79c973*)MemoryManager::activeMemoryManager->malloc(sizeof(amd_am79c973));
                     if(driver != 0)
+                        /* only if it is non NULL we call the constructor explicitly */
                         new (driver) amd_am79c973(&dev, interrupts);
                     else
                         printf("instantiation failed");

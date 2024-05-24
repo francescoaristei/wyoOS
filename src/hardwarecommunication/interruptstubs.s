@@ -14,7 +14,7 @@ _ZN4wyoos21hardwarecommunication16InterruptManager19HandleException\num\()Ev:
     jmp int_bottom
 .endm
 
-
+# push $0 is required for the uint32_t error in the CPUState struct
 .macro HandleInterruptRequest num
 .global _ZN4wyoOS21hardwarecommunication16InterruptManager26HandleInterruptRequest\num\()Ev
 _ZN4wyoos21hardwarecommunication16InterruptManager26HandleInterruptRequest\num\()Ev:
@@ -112,6 +112,7 @@ int_bottom:
     #pop %ds
     #popa
     
+    # we need to add four to the esp
     add $4, %esp
 
 .global _ZN4wyoOS21hardwarecommunication16InterruptManager15InterruptIgnoreEv

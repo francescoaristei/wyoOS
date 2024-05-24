@@ -63,6 +63,7 @@ InterruptManager::InterruptManager(uint16_t hardwareInterruptOffset, GlobalDescr
       programmableInterruptControllerSlaveCommandPort(0xA0),
       programmableInterruptControllerSlaveDataPort(0xA1)
 {
+    /* needed for the scheduling */
     this->taskManager = taskManager;
     this->hardwareInterruptOffset = hardwareInterruptOffset;
     uint32_t CodeSegment = globalDescriptorTable->CodeSegmentSelector();
@@ -185,9 +186,10 @@ uint32_t InterruptManager::DoHandleInterrupt(uint8_t interrupt, uint32_t esp)
         printf("UNHANDLED INTERRUPT 0x");
         printfHex(interrupt);
     }
-    
+    /* if we have a timer interrupt */
     if(interrupt == hardwareInterruptOffset)
     {
+        /* then we will set the ESP to the task manager schedule */
         esp = (uint32_t)taskManager->Schedule((CPUState*)esp);
     }
 

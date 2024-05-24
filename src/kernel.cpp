@@ -234,7 +234,7 @@ extern "C" void kernelMain(const void* multiboot_structure, uint32_t /*multiboot
 
     GlobalDescriptorTable gdt;
     
-    
+    /* used to read from grub how much memory to allocate at the beginning */
     uint32_t* memupper = (uint32_t*)(((size_t)multiboot_structure) + 8);
     size_t heap = 10*1024*1024;
     MemoryManager memoryManager(heap, (*memupper)*1024 - heap - 10*1024);
@@ -261,6 +261,7 @@ extern "C" void kernelMain(const void* multiboot_structure, uint32_t /*multiboot
     taskManager.AddTask(&task2);
     */
     
+    /* interrupt manager needs to talk to the task manager to do the scheduling, therefore before we instantiate the task manager */
     InterruptManager interrupts(0x20, &gdt, &taskManager);
     SyscallHandler syscalls(&interrupts, 0x80);
     
@@ -369,7 +370,10 @@ extern "C" void kernelMain(const void* multiboot_structure, uint32_t /*multiboot
     UserDatagramProtocolProvider udp(&ipv4);
     TransmissionControlProtocolProvider tcp(&ipv4);
     
-    
+    /*
+    Last thing to do because after that i don't know when the CPU jumps out of the kernel stack and goes into the tasks (multi tasking)
+    and it never goes back into the kernel stack therefore everything that happens after this interrupt might never be executed anymore 
+    */
     interrupts.Activate();
 
     printf("\n\n\n\n");
