@@ -11,6 +11,7 @@ InternetProtocolHandler::InternetProtocolHandler(InternetProtocolProvider* backe
 {
     this->backend = backend;
     this->ip_protocol = protocol;
+    /* we register ourself as handler for the protocol (which will be used by the next "higher level" protocol) */
     backend->handlers[protocol] = this;
 }
 
@@ -58,15 +59,18 @@ bool InternetProtocolProvider::OnEtherFrameReceived(uint8_t* etherframePayload, 
     InternetProtocolV4Message* ipmessage = (InternetProtocolV4Message*)etherframePayload;
     bool sendBack = false;
     
+    /* if the message is for us */
     if(ipmessage->dstIP == backend->GetIPAddress())
     {
         int length = ipmessage->totalLength;
         if(length > size)
-            length = size;
+            length = size; /* size is the length of the ethernet frame */
         
+        /* if we have a handler for that protocol */
         if(handlers[ipmessage->protocol] != 0)
             sendBack = handlers[ipmessage->protocol]->OnInternetProtocolReceived(
                 ipmessage->srcIP, ipmessage->dstIP, 
+                /* the payload is after the header, but we have optional fields, so we use the headerLenght multiplied by 4 (32 bits) */
                 etherframePayload + 4*ipmessage->headerLength, length - 4*ipmessage->headerLength);
         
     }
@@ -77,8 +81,9 @@ bool InternetProtocolProvider::OnEtherFrameReceived(uint8_t* etherframePayload, 
         ipmessage->dstIP = ipmessage->srcIP;
         ipmessage->srcIP = temp;
         
-        ipmessage->timeToLive = 0x40;
+        ipmessage->timeToLive = 0x40; /* reset TTL */
         ipmessage->checksum = 0;
+        /* checksum must be correct otherwise IPv4 discards the whole packet */
         ipmessage->checksum = Checksum((uint16_t*)ipmessage, 4*ipmessage->headerLength);
     }
     
@@ -96,7 +101,7 @@ void InternetProtocolProvider::Send(uint32_t dstIP_BE, uint8_t protocol, uint8_t
     message->headerLength = sizeof(InternetProtocolV4Message)/4;
     message->tos = 0;
     message->totalLength = size + sizeof(InternetProtocolV4Message);
-    message->totalLength = ((message->totalLength & 0xFF00) >> 8)
+    message->totalLength = ((message->totalLength & 0xFF00) >> 8) /* switch the bytes to move to little endian */
                          | ((message->totalLength & 0x00FF) << 8);
     message->ident = 0x0100;
     message->flagsAndOffset = 0x0040;
@@ -108,19 +113,25 @@ void InternetProtocolProvider::Send(uint32_t dstIP_BE, uint8_t protocol, uint8_t
     
     message->checksum = 0;
     message->checksum = Checksum((uint16_t*)message, sizeof(InternetProtocolV4Message));
+
+    /* header is now finished, copy message to sent */
     
     uint8_t* databuffer = buffer + sizeof(InternetProtocolV4Message);
     for(int i = 0; i < size; i++)
         databuffer[i] = data[i];
-    
+    /*
+    By default we want to send the data to the destination. Route is the IP address that we resolve(). But if the IP is not in our
+    local net, (we understand it via the subnet) than we need to send the message to the gateway which will handle the sending on our 
+    behalf.
+    */
     uint32_t route = dstIP_BE;
     if((dstIP_BE & subnetMask) != (message->srcIP & subnetMask))
         route = gatewayIP;
     
-
+    /* we ask the ARP for the MAC address that we then pass to the Ethernet handler (can cause infinite loop as described) */
     backend->Send(arp->Resolve(route), this->etherType_BE, buffer, sizeof(InternetProtocolV4Message) + size);
     
-    
+    /* once the data has been sent, we can free the buffer */
     MemoryManager::activeMemoryManager->free(buffer);
 }
 
@@ -130,14 +141,19 @@ uint16_t InternetProtocolProvider::Checksum(uint16_t* data, uint32_t lengthInByt
     uint32_t temp = 0;
 
     for(int i = 0; i < lengthInBytes/2; i++)
+        /* we add the data in big endian. */
         temp += ((data[i] & 0xFF00) >> 8) | ((data[i] & 0x00FF) << 8);
 
+    /* If the data we send is an odd number, there will be one byte left at the end */
     if(lengthInBytes % 2)
+        /* cast to an array of single byte values and then take the last one  and then shift to the left */
         temp += ((uint16_t)((char*)data)[lengthInBytes-1]) << 8;
     
+    /* if we have an overflow when we sum this up, we take the overflowed bits and add it until the last 16 bits are all zeros */
     while(temp & 0xFFFF0000)
         temp = (temp & 0xFFFF) + (temp >> 16);
     
+    /* return the value to big endian */
     return ((~temp & 0xFF00) >> 8) | ((~temp & 0x00FF) << 8);
 }
 

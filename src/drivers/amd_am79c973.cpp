@@ -5,8 +5,6 @@ using namespace myos::common;
 using namespace myos::drivers;
 using namespace myos::hardwarecommunication;
 
- 
-
 
 RawDataHandler::RawDataHandler(amd_am79c973* backend)
 {
@@ -28,10 +26,6 @@ void RawDataHandler::Send(uint8_t* buffer, uint32_t size)
 {
     backend->Send(buffer, size);
 }
-
-
-
-
 
 void printf(char*);
 void printfHex(uint8_t);

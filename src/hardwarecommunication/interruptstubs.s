@@ -63,6 +63,7 @@ HandleInterruptRequest 0x0E
 HandleInterruptRequest 0x0F
 HandleInterruptRequest 0x31
 
+# system call interrupt number
 HandleInterruptRequest 0x80
 
 

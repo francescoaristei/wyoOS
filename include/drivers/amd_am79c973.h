@@ -17,9 +17,11 @@ namespace myos
         
         class amd_am79c973;
         
+        /* handler of the data received as ethernet frames */
         class RawDataHandler
         {
         protected:
+            /* the handler needs to know where it is receiving data from */
             amd_am79c973* backend;
         public:
             RawDataHandler(amd_am79c973* backend);
@@ -105,6 +107,7 @@ namespace myos
             
             void SetHandler(RawDataHandler* handler);
             common::uint64_t GetMACAddress();
+            /* set the IP address manually not with an DHCP server. */
             void SetIPAddress(common::uint32_t);
             common::uint32_t GetIPAddress();
         };
@@ -113,7 +116,5 @@ namespace myos
         
     }
 }
-
-
 
 #endif

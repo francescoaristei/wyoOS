@@ -43,12 +43,14 @@ namespace myos
             InternetProtocolHandler(InternetProtocolProvider* backend, common::uint8_t protocol);
             ~InternetProtocolHandler();
             
+            /* needed the dstIP and srcIP to distinguish to different connection on the same port. */
             virtual bool OnInternetProtocolReceived(common::uint32_t srcIP_BE, common::uint32_t dstIP_BE,
                                             common::uint8_t* internetprotocolPayload, common::uint32_t size);
             void Send(common::uint32_t dstIP_BE, common::uint8_t* internetprotocolPayload, common::uint32_t size);
         };
      
-     
+        /* IP provider will look at the Internet protocol message and depending on the protocol it will pass the message to the 
+        Internet protocol handler. Same as the case of the Ethernet frame provider passing the message to the Ethernet frame handler. */
         class InternetProtocolProvider : public EtherFrameHandler
         {
         friend class InternetProtocolHandler;
@@ -60,7 +62,10 @@ namespace myos
             
         public:
             InternetProtocolProvider(EtherFrameProvider* backend, 
-                                     AddressResolutionProtocol* arp,
+                                     AddressResolutionProtocol* arp, /* pointer to the ARP handler needed to get the MAC address from the IP address (resolve method of ARP class) */
+                                     /*
+                                     
+                                     */
                                      common::uint32_t gatewayIP, common::uint32_t subnetMask);
             ~InternetProtocolProvider();
             

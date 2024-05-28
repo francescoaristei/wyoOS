@@ -200,12 +200,13 @@ public:
     }
 };
 
-
+/* printf executed via system call */
 void sysprintf(char* str)
 {
     asm("int $0x80" : : "a" (4), "b" (str));
 }
 
+/* tasks now pass through the kernel to do the printf which is allowed to do this */
 void taskA()
 {
     while(true)
@@ -343,13 +344,13 @@ extern "C" void kernelMain(const void* multiboot_structure, uint32_t /*multiboot
     
     // IP Address
     uint8_t ip1 = 10, ip2 = 0, ip3 = 2, ip4 = 15;
-    uint32_t ip_be = ((uint32_t)ip4 << 24)
+    uint32_t ip_be = ((uint32_t)ip4 << 24) /* own IP address */
                 | ((uint32_t)ip3 << 16)
                 | ((uint32_t)ip2 << 8)
                 | (uint32_t)ip1;
-    eth0->SetIPAddress(ip_be);
-    EtherFrameProvider etherframe(eth0);
-    AddressResolutionProtocol arp(&etherframe);    
+    eth0->SetIPAddress(ip_be); /* inform network card that this is our own IP address */
+    EtherFrameProvider etherframe(eth0); /* attach the Ethernet frame to the driver */
+    AddressResolutionProtocol arp(&etherframe); /* attach the ARP to the frame */
 
     
     // IP Address of the default gateway
@@ -378,6 +379,7 @@ extern "C" void kernelMain(const void* multiboot_structure, uint32_t /*multiboot
 
     printf("\n\n\n\n");
     
+    /* The answer we receive are done through the interrupt handler, so we need to activate the interrupts before */
     arp.BroadcastMACAddress(gip_be);
     
     

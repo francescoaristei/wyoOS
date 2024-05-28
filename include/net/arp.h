@@ -28,8 +28,6 @@ namespace myos
             
         } __attribute__((packed));
         
-        
-        
         class AddressResolutionProtocol : public EtherFrameHandler
         {
             
@@ -43,15 +41,17 @@ namespace myos
             
             bool OnEtherFrameReceived(common::uint8_t* etherframePayload, common::uint32_t size);
 
+            /*
+            Request MAC address for the IP address passed as parameter, when we receive an answer we store the MAC address in the MACcache 
+            when we get the answer, this is goind in the onEtherFrameReceived method which stores it and then we have the GetMACFromCache which
+            looks in the cache to get the MAC address.
+            */
             void RequestMACAddress(common::uint32_t IP_BE);
             common::uint64_t GetMACFromCache(common::uint32_t IP_BE);
             common::uint64_t Resolve(common::uint32_t IP_BE);
             void BroadcastMACAddress(common::uint32_t IP_BE);
         };
-        
-        
     }
 }
-
 
 #endif

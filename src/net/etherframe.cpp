@@ -20,9 +20,11 @@ EtherFrameHandler::~EtherFrameHandler()
     if(backend->handlers[etherType_BE] == this)
         backend->handlers[etherType_BE] = 0;
 }
-            
+
+
 bool EtherFrameHandler::OnEtherFrameReceived(common::uint8_t* etherframePayload, common::uint32_t size)
 {
+    /* we are not sending anything back by default */
     return false;
 }
 
@@ -35,8 +37,6 @@ uint32_t EtherFrameHandler::GetIPAddress()
 {
     return backend->GetIPAddress();
 }
-
-
 
             
 EtherFrameProvider::EtherFrameProvider(amd_am79c973* backend)
@@ -58,14 +58,17 @@ bool EtherFrameProvider::OnRawDataReceived(common::uint8_t* buffer, common::uint
     EtherFrameHeader* frame = (EtherFrameHeader*)buffer;
     bool sendBack = false;
     
+    /* if frame destination is a broadcast or has as destination MAC our MAC address then we handle the frame */
     if(frame->dstMAC_BE == 0xFFFFFFFFFFFF
     || frame->dstMAC_BE == backend->GetMACAddress())
     {
+        /* we look the array of handlers if we have an handler for this frame type */
         if(handlers[frame->etherType_BE] != 0)
             sendBack = handlers[frame->etherType_BE]->OnEtherFrameReceived(
-                buffer + sizeof(EtherFrameHeader), size - sizeof(EtherFrameHeader));
+                buffer + sizeof(EtherFrameHeader), size - sizeof(EtherFrameHeader)); /* we extract only the data in the payload */
     }
     
+    /* if we want to send the data back again to the driver, so we invert src and dst. */
     if(sendBack)
     {
         frame->dstMAC_BE = frame->srcMAC_BE;
@@ -75,8 +78,10 @@ bool EtherFrameProvider::OnRawDataReceived(common::uint8_t* buffer, common::uint
     return sendBack;
 }
 
+/* calls the send of the backend */
 void EtherFrameProvider::Send(common::uint64_t dstMAC_BE, common::uint16_t etherType_BE, common::uint8_t* buffer, common::uint32_t size)
 {
+    /* we get memory for the header and the size of the buffer that we want to send. */
     uint8_t* buffer2 = (uint8_t*)MemoryManager::activeMemoryManager->malloc(sizeof(EtherFrameHeader) + size);
     EtherFrameHeader* frame = (EtherFrameHeader*)buffer2;
     
@@ -84,6 +89,7 @@ void EtherFrameProvider::Send(common::uint64_t dstMAC_BE, common::uint16_t ether
     frame->srcMAC_BE = backend->GetMACAddress();
     frame->etherType_BE = etherType_BE;
     
+    /* copy the data from the src buffer to the dst buffer. */
     uint8_t* src = buffer;
     uint8_t* dst = buffer2 + sizeof(EtherFrameHeader);
     for(uint32_t i = 0; i < size; i++)
