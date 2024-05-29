@@ -11,7 +11,7 @@ namespace myos
     namespace net
     {
         
-        
+        /* struct of the ICMP message */
         struct InternetControlMessageProtocolMessage
         {
             common::uint8_t type;
@@ -28,8 +28,11 @@ namespace myos
             InternetControlMessageProtocol(InternetProtocolProvider* backend);
             ~InternetControlMessageProtocol();
             
+            /* overridden from InternetProtocolHandler */
             bool OnInternetProtocolReceived(common::uint32_t srcIP_BE, common::uint32_t dstIP_BE,
                                             common::uint8_t* internetprotocolPayload, common::uint32_t size);
+
+            /* request a PING it takes as parameter the IP that we want to PING */
             void RequestEchoReply(common::uint32_t ip_be);
         };
         

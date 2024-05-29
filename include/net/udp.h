@@ -21,7 +21,7 @@ namespace myos
         } __attribute__((packed));
        
       
-      
+        /* when an application wants to connect to another machine, the UDP creates a socket */
         class UserDatagramProtocolSocket;
         class UserDatagramProtocolProvider;
         
@@ -32,6 +32,7 @@ namespace myos
         public:
             UserDatagramProtocolHandler();
             ~UserDatagramProtocolHandler();
+            /* the socket passes its information to the UDP handler */
             virtual void HandleUserDatagramProtocolMessage(UserDatagramProtocolSocket* socket, common::uint8_t* data, common::uint16_t size);
         };
       
@@ -39,8 +40,10 @@ namespace myos
       
         class UserDatagramProtocolSocket
         {
+        /* data flow: UDP class --> Socket class --> UDP Handler class */
         friend class UserDatagramProtocolProvider;
         protected:
+            /* the socket will mantain some information of the UDP message */
             common::uint16_t remotePort;
             common::uint32_t remoteIP;
             common::uint16_t localPort;
@@ -57,11 +60,13 @@ namespace myos
         };
       
       
-        class UserDatagramProtocolProvider : InternetProtocolHandler
+        class UserDatagramProtocolProvider : InternetProtocolHandler /* the UDP takes an IPv4 packet in input */
         {
         protected:
+            /* array of sockets */
             UserDatagramProtocolSocket* sockets[65535];
             common::uint16_t numSockets;
+            /* free ports on the local machine (my machine) */
             common::uint16_t freePort;
             
         public:
@@ -71,18 +76,16 @@ namespace myos
             virtual bool OnInternetProtocolReceived(common::uint32_t srcIP_BE, common::uint32_t dstIP_BE,
                                                     common::uint8_t* internetprotocolPayload, common::uint32_t size);
 
+            /* given a certain IP and Port gives us the socket */
             virtual UserDatagramProtocolSocket* Connect(common::uint32_t ip, common::uint16_t port);
             virtual UserDatagramProtocolSocket* Listen(common::uint16_t port);
             virtual void Disconnect(UserDatagramProtocolSocket* socket);
             virtual void Send(UserDatagramProtocolSocket* socket, common::uint8_t* data, common::uint16_t size);
-
             virtual void Bind(UserDatagramProtocolSocket* socket, UserDatagramProtocolHandler* handler);
         };
         
         
     }
 }
-
-
 
 #endif

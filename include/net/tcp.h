@@ -11,8 +11,7 @@ namespace myos
 {
     namespace net
     {
-        
-        
+        /* enumeration for each of the possible states of the TCP protocol (look at diagrams online) */
         enum TransmissionControlProtocolSocketState
         {
             CLOSED,
@@ -44,7 +43,6 @@ namespace myos
             NS = 256
         };
         
-        
         struct TransmissionControlProtocolHeader
         {
             common::uint16_t srcPort;
@@ -64,6 +62,7 @@ namespace myos
         } __attribute__((packed));
        
       
+        /* this pseudo header is attached to the IPv4 message when sending data from TCP */
         struct TransmissionControlProtocolPseudoHeader
         {
             common::uint32_t srcIP;
@@ -75,8 +74,6 @@ namespace myos
       
         class TransmissionControlProtocolSocket;
         class TransmissionControlProtocolProvider;
-        
-        
         
         class TransmissionControlProtocolHandler
         {
@@ -96,6 +93,7 @@ namespace myos
             common::uint32_t remoteIP;
             common::uint16_t localPort;
             common::uint32_t localIP;
+            /* the socket needs to know which number to send next as the sequence number therefore we need to store our own sequence number */
             common::uint32_t sequenceNumber;
             common::uint32_t acknowledgementNumber;
 
@@ -133,13 +131,8 @@ namespace myos
 
             virtual TransmissionControlProtocolSocket* Listen(common::uint16_t port);
             virtual void Bind(TransmissionControlProtocolSocket* socket, TransmissionControlProtocolHandler* handler);
-        };
-        
-        
-        
-        
+        };   
     }
 }
-
 
 #endif

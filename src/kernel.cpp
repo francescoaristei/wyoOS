@@ -176,8 +176,6 @@ public:
             printf(foo);
         }
         
-        
-        
         if(size > 9
             && data[0] == 'G'
             && data[1] == 'E'

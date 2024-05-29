@@ -21,10 +21,6 @@ bool TransmissionControlProtocolHandler::HandleTransmissionControlProtocolMessag
     return true;
 }
 
-
-
-
-
 TransmissionControlProtocolSocket::TransmissionControlProtocolSocket(TransmissionControlProtocolProvider* backend)
 {
     this->backend = backend;
@@ -57,9 +53,6 @@ void TransmissionControlProtocolSocket::Disconnect()
 }
 
 
-
-
-
 TransmissionControlProtocolProvider::TransmissionControlProtocolProvider(InternetProtocolProvider* backend)
 : InternetProtocolHandler(backend, 0x06)
 {
@@ -72,12 +65,6 @@ TransmissionControlProtocolProvider::TransmissionControlProtocolProvider(Interne
 TransmissionControlProtocolProvider::~TransmissionControlProtocolProvider()
 {
 }
-
-
-
-
-
-
 
 uint32_t bigEndian32(uint32_t x)
 {
@@ -269,21 +256,7 @@ bool TransmissionControlProtocolProvider::OnInternetProtocolReceived(uint32_t sr
     return false;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
 // ------------------------------------------------------------------------------------------
-
-
 
 
 void TransmissionControlProtocolProvider::Send(TransmissionControlProtocolSocket* socket, uint8_t* data, uint16_t size, uint16_t flags)
@@ -295,10 +268,11 @@ void TransmissionControlProtocolProvider::Send(TransmissionControlProtocolSocket
     
     TransmissionControlProtocolPseudoHeader* phdr = (TransmissionControlProtocolPseudoHeader*)buffer;
     TransmissionControlProtocolHeader* msg = (TransmissionControlProtocolHeader*)(buffer + sizeof(TransmissionControlProtocolPseudoHeader));
+    /* buffer of the data */
     uint8_t* buffer2 = buffer + sizeof(TransmissionControlProtocolHeader)
                               + sizeof(TransmissionControlProtocolPseudoHeader);
     
-    msg->headerSize32 = sizeof(TransmissionControlProtocolHeader)/4;
+    msg->headerSize32 = sizeof(TransmissionControlProtocolHeader)/4; // divided by 4 because it is in 32 bit integer size
     msg->srcPort = socket->localPort;
     msg->dstPort = socket->remotePort;
     
@@ -311,6 +285,7 @@ void TransmissionControlProtocolProvider::Send(TransmissionControlProtocolSocket
     
     msg->options = ((flags & SYN) != 0) ? 0xB4050402 : 0;
     
+    /* increase the sequence number for the next message by the size of the data we are sending */
     socket->sequenceNumber += size;
         
     for(int i = 0; i < size; i++)
@@ -318,14 +293,12 @@ void TransmissionControlProtocolProvider::Send(TransmissionControlProtocolSocket
     
     phdr->srcIP = socket->localIP;
     phdr->dstIP = socket->remoteIP;
-    phdr->protocol = 0x0600;
+    phdr->protocol = 0x0600; /* number 6 for the IP protocol in the TCP protocol number but written in big endian */
     phdr->totalLength = ((totalLength & 0x00FF) << 8) | ((totalLength & 0xFF00) >> 8);    
     
     msg -> checksum = 0;
     msg -> checksum = InternetProtocolProvider::Checksum((uint16_t*)buffer, lengthInclPHdr);
 
-    
-    
     InternetProtocolHandler::Send(socket->remoteIP, (uint8_t*)msg, totalLength);
     MemoryManager::activeMemoryManager->free(buffer);
 }
@@ -353,12 +326,15 @@ TransmissionControlProtocolSocket* TransmissionControlProtocolProvider::Connect(
         
         socket -> sequenceNumber = 0xbeefcafe;
         
+        /* 
+        we send the SYN only after the socket is connected to the TCP socket otherwise we would receive an answer that we wouldn't
+        get if we send the SYN before setting the handler correctly 
+        */
         Send(socket, 0,0, SYN);
     }
     
     return socket;
 }
-
 
 
 void TransmissionControlProtocolProvider::Disconnect(TransmissionControlProtocolSocket* socket)
