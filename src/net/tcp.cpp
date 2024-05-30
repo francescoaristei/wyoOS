@@ -79,7 +79,7 @@ uint32_t bigEndian32(uint32_t x)
 bool TransmissionControlProtocolProvider::OnInternetProtocolReceived(uint32_t srcIP_BE, uint32_t dstIP_BE,
                                         uint8_t* internetprotocolPayload, uint32_t size)
 {
-    
+    /* the size needs to be at least 20 bytes because is the smallest size for a TCP header */
     if(size < 20)
         return false;
     TransmissionControlProtocolHeader* msg = (TransmissionControlProtocolHeader*)internetprotocolPayload;
@@ -88,6 +88,7 @@ bool TransmissionControlProtocolProvider::OnInternetProtocolReceived(uint32_t sr
     uint16_t remotePort = msg->srcPort;
     
     TransmissionControlProtocolSocket* socket = 0;
+    /* we look at our sockets and find the socket which is responsible for the handling of this message */
     for(uint16_t i = 0; i < numSockets && socket == 0; i++)
     {
         if( sockets[i]->localPort == msg->dstPort
@@ -106,6 +107,7 @@ bool TransmissionControlProtocolProvider::OnInternetProtocolReceived(uint32_t sr
         
     bool reset = false;
     
+    /* if we get a reset we do not go in the switch cases, and the socket is immediately removed from our list of sockets */
     if(socket != 0 && msg->flags & RST)
         socket->state = CLOSED;
 
@@ -115,6 +117,7 @@ bool TransmissionControlProtocolProvider::OnInternetProtocolReceived(uint32_t sr
         switch((msg -> flags) & (SYN | ACK | FIN))
         {
             case SYN:
+                /* if we are a server and we are listening and we receive a message we send a SYN|ACK */
                 if(socket -> state == LISTEN)
                 {
                     socket->state = SYN_RECEIVED;
@@ -126,11 +129,13 @@ bool TransmissionControlProtocolProvider::OnInternetProtocolReceived(uint32_t sr
                     socket->sequenceNumber++;
                 }
                 else
+                    /* if someone tries to connect with us without us listening than we close the connection */
                     reset = true;
                 break;
 
                 
             case SYN | ACK:
+                /* we should send a SYN | ACK only if we have sent a SYN before, otherwise close the connection */
                 if(socket->state == SYN_SENT)
                 {
                     socket->state = ESTABLISHED;
@@ -142,19 +147,22 @@ bool TransmissionControlProtocolProvider::OnInternetProtocolReceived(uint32_t sr
                     reset = true;
                 break;
                 
-                
+            /* cannot SYN and FIN in the same message */
             case SYN | FIN:
             case SYN | FIN | ACK:
                 reset = true;
                 break;
 
-                
+            
+            /* FIN and ACK are treated in the same way */
             case FIN:
             case FIN|ACK:
+                /* if i am currently established i shouldn't receive a FIN |ACK unless the other doesn't want to disconnect */
                 if(socket->state == ESTABLISHED)
                 {
                     socket->state = CLOSE_WAIT;
                     socket->acknowledgementNumber++;
+                    /* first send an ACK, then a FIN | ACK */
                     Send(socket, 0,0, ACK);
                     Send(socket, 0,0, FIN|ACK);
                 }
@@ -162,6 +170,7 @@ bool TransmissionControlProtocolProvider::OnInternetProtocolReceived(uint32_t sr
                 {
                     socket->state = CLOSED;
                 }
+                /* we have sent a FIN, we have receive a FIN |ACK so we just have to send an ACK */
                 else if(socket->state == FIN_WAIT1
                     || socket->state == FIN_WAIT2)
                 {
@@ -175,6 +184,7 @@ bool TransmissionControlProtocolProvider::OnInternetProtocolReceived(uint32_t sr
                 
                 
             case ACK:
+                /* we were listening before, we have receive the FIN and send the ACK so now we move in established */
                 if(socket->state == SYN_RECEIVED)
                 {
                     socket->state = ESTABLISHED;
@@ -194,14 +204,17 @@ bool TransmissionControlProtocolProvider::OnInternetProtocolReceived(uint32_t sr
                 if(msg->flags == ACK)
                     break;
                 
-                // no break, because of piggybacking
+                // no break, because of piggybacking (send the data together with the ACK of the previous message received)
                 
             default:
                 
-                if(bigEndian32(msg->sequenceNumber) == socket->acknowledgementNumber)
+                /* we handle the data that we get */
+                if(bigEndian32(msg->sequenceNumber) == socket->acknowledgementNumber) /* if our sequence number and the ack number are different means that we have receive the msgs in wrong order and we cannot handle the msg yet */
                 {
+                    /* the handler might say: kill this connection or keep the connection alive */
                     reset = !(socket->HandleTransmissionControlProtocolMessage(internetprotocolPayload + msg->headerSize32*4,
                                                                               size - msg->headerSize32*4));
+                    /* if we do not reset, we ack the data received */
                     if(!reset)
                     {
                         int x = 0;
@@ -224,6 +237,7 @@ bool TransmissionControlProtocolProvider::OnInternetProtocolReceived(uint32_t sr
     
     if(reset)
     {
+        /* if we have a socket and receive illegal data on it we send back the reset */
         if(socket != 0)
         {
             Send(socket, 0,0, RST);

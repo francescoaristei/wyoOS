@@ -232,7 +232,7 @@ void amd_am79c973::Receive()
             uint8_t* buffer = (uint8_t*)(recvBufferDescr[currentRecvBuffer].address);
 
             /* iterate over the data and print what we have received */
-            for(int i = 14+20; i < (size>64?64:size); i++)
+            for(int i = 14+20; i < (size>64?64:size); i++) /* 14 is the size of the Ethernet frame header and 20 is the size of the IPv4 header this way we print only the TCP part of the message */
             {
                 printfHex(buffer[i]);
                 printf(" ");

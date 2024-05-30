@@ -21,6 +21,8 @@
 #include <net/udp.h>
 #include <net/tcp.h>
 
+# include <filesystem/msdospart.h>
+
 
 // #define GRAPHICSMODE
 
@@ -33,6 +35,7 @@ using namespace myos::gui;
 using namespace myos::net;
 
 
+using namespace myos::filesystem;
 
 void printf(char* str)
 {
@@ -193,7 +196,6 @@ public:
             socket->Disconnect();
         }
         
-        
         return true;
     }
 };
@@ -322,6 +324,14 @@ extern "C" void kernelMain(const void* multiboot_structure, uint32_t /*multiboot
     printf("\nS-ATA primary slave: ");
     AdvancedTechnologyAttachment ata0s(false, 0x1F0);
     ata0s.Identify();
+
+    */
+
+   printf("\n\n\n\n\n\n\n\n\n");
+   MSDOSPartitionTable::ReadPartitions(&ata0s);
+
+
+    /*
     ata0s.Write28(0, (uint8_t*)"http://www.AlgorithMan.de", 25);
     ata0s.Flush();
     ata0s.Read28(0, 25);
